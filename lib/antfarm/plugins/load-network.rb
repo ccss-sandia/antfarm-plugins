@@ -1,5 +1,7 @@
 module Antfarm
   module Plugin
+    class FileDoesNotExistError < Antfarm::AntfarmError; end
+
     class LoadNetwork
       include Antfarm::Plugin
 
@@ -15,20 +17,22 @@ module Antfarm
       end
 
       def run(options)
+        print_message "Parsing file #{options[:input_file]}"
+
         begin
           File.open(options[:input_file]) do |file|
             file.each do |line|
-              puts "Loading network #{line.strip}"
-              unless Antfarm::Models::IpNetwork.find_by_address line.strip
-                Antfarm::Models::IpNetwork.create :address => line.strip
+              print_message "Loading network #{line.strip}"
+
+              unless Antfarm::Model::IpNetwork.find_by_address line.strip
+                Antfarm::Model::IpNetwork.create :address => line.strip
               end
             end
           end
         rescue Errno::ENOENT
-          puts "The file '#{options[:input_file]}' doesn't exist"
+          raise FileDoesNotExistError, "The file '#{options[:input_file]}' doesn't exist"
         rescue Exception => e
-          puts e
-          puts e.backtrace.join("\n")
+          raise Antfarm::AntfarmError, e.message
         end
       end
     end
