@@ -1,6 +1,8 @@
 module Antfarm
   module Plugin
     module Cisco
+      class FileDoesNotExistError < Antfarm::AntfarmError; end
+
       class ParseInterfaces
         include Antfarm::Plugin
 
@@ -16,9 +18,9 @@ module Antfarm
         end
 
         def run(options)
-          begin
-            puts options[:input_file]
+          print_message "Parsing file #{options[:input_file]}"
 
+          begin
             pix_version_regexp   = Regexp.new('^PIX Version ((\d+)\.(\d+)\((\d+)\))')
             hostname_regexp      = Regexp.new('^hostname (\S+)')
             iface_regexp         = Regexp.new('^interface')
@@ -77,15 +79,14 @@ module Antfarm
               
               unless ip_iface.save
                 ip_iface.errors.each_full do |msg|
-                  puts msg
+                  print_error msg
                 end
               end
             end
           rescue Errno::ENOENT
-            puts "The file '#{options[:input_file]}' doesn't exist"
+            raise FileDoesNotExistError, "The file '#{options[:input_file]}' doesn't exist"
           rescue Exception => e
-            puts e
-            puts e.backtrace.join("\n")
+            raise Antfarm::AntfarmError, e.message
           end
         end
       end
