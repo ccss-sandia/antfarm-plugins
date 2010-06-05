@@ -62,12 +62,9 @@ module Antfarm
 
           # If we get here, a plugin was never
           # loaded and returned.
-          raise Antfarm::PluginExistanceError
-        rescue Antfarm::PluginExistanceError => err
-          puts "The plugin '#{plugin}' cannot be found."
-          Antfarm::Helpers.log :warn, err
-        rescue Exception => err
-          puts "I dunno... #{err}"
+          raise Antfarm::PluginExistanceError, message
+        rescue Exception => e
+          raise Antfarm::AntfarmError, e.message
         end
       end
     end
@@ -93,30 +90,27 @@ module Antfarm
         # create class object for plugin
         plugin_class = eval("Antfarm::Plugin::#{camelized_name}")
         # make sure plugin inherits from this class
-        raise Antfarm::PluginInheritanceError unless plugin_class < self
+        unless plugin_class < self
+          raise Antfarm::PluginInheritanceError, "#{name} does not inherit from Antfarm::Plugin - this plugin will be unavailable"
+          return nil
+        end
         # create a new plugin object
         plugin = plugin_class.new
         # tell the plugin what its name is
         plugin.name = name
         # return the plugin
         return plugin
-      rescue LoadError => err
-        puts "An error occurred while trying to load #{name} - this plugin will be unavailable"
-        Antfarm::Helpers.log :warn, err
+      rescue LoadError
+        raise Antfarm::AntfarmError, "An error occurred while trying to load #{name} - this plugin will be unavailable"
         return nil
-      rescue Antfarm::PluginInheritanceError => err
-        puts "#{name} does not inherit from Antfarm::Plugin - this plugin will be unavailable"
-        Antfarm::Helpers.log :warn, err
-        return nil
-      rescue Exception => err
-        puts "An error occurred while initializing #{name} - this plugin will be unavailable"
-        Antfarm::Helpers.log :warn, err
+      rescue Exception => e
+        raise Antfarm::AntfarmError, "An error occurred while initializing #{name} - this plugin will be unavailable"
         return nil
       end
     end
 
-    ALLOWED_INFO      = [:name, :author, :desc ]
-    ALLOWED_OPTIONS   = [:name, :desc, :long, :short, :type, :default, :required]
+    ALLOWED_INFO    = [:name, :author, :desc ]
+    ALLOWED_OPTIONS = [:name, :desc, :long, :short, :type, :default, :required]
 
     attr_reader :info
     attr_reader :options
@@ -136,6 +130,14 @@ module Antfarm
           option.reject! { |k,v| !ALLOWED_OPTIONS.include?(k) }
         end
       end
+    end
+
+    def print_message(message)
+      Antfarm::Helpers.output "Message: #{message}"
+    end
+
+    def print_error(message)
+      Antfarm::Helpers.output "Error: #{message}"
     end
   end
 end
