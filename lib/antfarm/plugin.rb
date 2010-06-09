@@ -103,7 +103,8 @@ module Antfarm
       rescue LoadError
         raise Antfarm::AntfarmError, "An error occurred while trying to load #{name} - this plugin will be unavailable"
         return nil
-      rescue Exception => e
+      rescue Exception => ex
+        Antfarm::Helpers.log :error, ex.message
         raise Antfarm::AntfarmError, "An error occurred while initializing #{name} - this plugin will be unavailable"
         return nil
       end
@@ -128,6 +129,8 @@ module Antfarm
           raise Antfarm::PluginOptionsError, 'Each option must specify a name'        unless option[:name]
           raise Antfarm::PluginOptionsError, 'Each option must specify a description' unless option[:desc]
           option.reject! { |k,v| !ALLOWED_OPTIONS.include?(k) }
+          option[:type]    = :flag unless option.key?(:type)
+          option[:default] = false if option[:type] == :flag
         end
       end
     end
